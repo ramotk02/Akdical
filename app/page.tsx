@@ -129,7 +129,7 @@ export default function LoginPage() {
                 </h3>
 
                 <p className="text-blue-100">
-                  Accès sécurisé avec Supabase.
+                  Accès sécurisé.
                 </p>
               </div>
             </div>
