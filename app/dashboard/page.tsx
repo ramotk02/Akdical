@@ -23,10 +23,28 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
 const getDate = (value: any) => {
   if (!value) return null;
 
+  if (value instanceof Date) return value;
+
   if (typeof value === 'number') {
     const parsed = XLSX.SSF.parse_date_code(value);
     if (!parsed) return null;
     return new Date(parsed.y, parsed.m - 1, parsed.d);
+  }
+
+  if (typeof value === 'string') {
+    const clean = value.trim();
+    const match = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+
+    if (match) {
+      const [, day, month, year, hour = '0', minute = '0'] = match;
+      return new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour),
+        Number(minute)
+      );
+    }
   }
 
   const date = new Date(value);
@@ -65,9 +83,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.user) {
         router.replace('/');
@@ -156,9 +172,7 @@ export default function Dashboard() {
                 className="px-6 py-3 rounded-2xl border border-blue-200 bg-white text-slate-800 font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {sites.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
 
@@ -274,9 +288,7 @@ function DelaiAcheteur({ user, site, onSaved }: any) {
         Calculer
       </button>
 
-      {result !== null && (
-        <ResultBox value={`${result} jours`} onSave={save} />
-      )}
+      {result !== null && <ResultBox value={`${result} jours`} onSave={save} />}
     </div>
   );
 }
@@ -341,9 +353,7 @@ function TauxSaving({ user, site, onSaved }: any) {
         Calculer %
       </button>
 
-      {result !== null && (
-        <ResultBox value={`${result}%`} onSave={save} />
-      )}
+      {result !== null && <ResultBox value={`${result}%`} onSave={save} />}
     </div>
   );
 }
@@ -404,9 +414,7 @@ function DelaiGlobal({ user, site, onSaved }: any) {
         Calculer
       </button>
 
-      {result !== null && (
-        <ResultBox value={`${result} jours`} onSave={save} />
-      )}
+      {result !== null && <ResultBox value={`${result} jours`} onSave={save} />}
     </div>
   );
 }
@@ -421,125 +429,64 @@ function ExcelImporter({ user, site, onSaved }: any) {
       const data = new Uint8Array(e.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+      const jsonData = XLSX.utils.sheet_to_json(sheet, {
+        range: 1,
+        defval: null,
+        raw: false,
+      });
 
       const calculated = jsonData
-  .map((row: any, index: number) => {
-    const getField = (row: any, possibleNames: string[]) => {
-  for (const name of possibleNames) {
-    if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
-      return row[name];
-    }
-  }
+        .map((row: any, index: number) => {
+          const validations = [
+            row['Date de validation 1'],
+            row['Date de validation 2'],
+            row['Date de validation 3'],
+          ]
+            .map(getDate)
+            .filter(Boolean) as Date[];
 
-  return null;
-};
+          const derniereValidation =
+            validations.length > 0
+              ? new Date(Math.max(...validations.map((d) => d.getTime())))
+              : null;
 
-const validations = [
-  getField(row, [
-    'Date de validation 1',
-    'Date validation 1',
-    'Validation 1',
-    'Date val 1',
-  ]),
+          const delaiAcheteur =
+            derniereValidation && row['Date de création BC']
+              ? diffInDays(row['Date de création BC'], derniereValidation)
+              : null;
 
-  getField(row, [
-    'Date de validation 2',
-    'Date validation 2',
-    'Validation 2',
-    'Date val 2',
-  ]),
+          const achat = Number(row["Montant d'Achat TTC"] || 0);
+          const economie = Number(row['Valeur économisée TTC'] || 0);
 
-  getField(row, [
-    'Date de validation 3',
-    'Date validation 3',
-    'Validation 3',
-    'Date val 3',
-  ]),
-]
-  .map(getDate)
-  .filter(Boolean) as Date[];
+          const saving = achat > 0 ? round2((economie / achat) * 100) : null;
 
-const derniereValidation =
-  validations.length > 0
-    ? new Date(
-        Math.max(...validations.map((d) => d.getTime()))
-      )
-    : null;
+          const delaiGlobal =
+            row['Date de validation BC'] && row['Date de création']
+              ? diffInDays(row['Date de validation BC'], row['Date de création'])
+              : null;
 
-const dateCreationBC = getField(row, [
-  'Date de création BC',
-  'Date création BC',
-  'Date BC',
-  'Date création bon de commande',
-]);
+          const titre =
+            row['Désignation'] ||
+            row['Article'] ||
+            row['Bon de commande'] ||
+            `Ligne ${index + 3}`;
 
-const achat = Number(
-  getField(row, [
-    "Montant d'Achat TTC",
-    "Valeur d'achat TTC",
-    'Montant Achat TTC',
-  ]) || 0
-);
-
-const economie = Number(
-  getField(row, [
-    'Valeur économisée TTC',
-    'Valeur économisée',
-    'Economies TTC',
-  ]) || 0
-);
-
-const dateValidationBC = getField(row, [
-  'Date de validation BC',
-  'Date validation BC',
-  'Validation BC',
-]);
-
-const dateCreation = getField(row, [
-  'Date de création',
-  'Date création',
-]);
-
-const delaiAcheteur =
-  derniereValidation && dateCreationBC
-    ? diffInDays(dateCreationBC, derniereValidation)
-    : null;
-
-const saving =
-  achat > 0
-    ? round2((economie / achat) * 100)
-    : null;
-
-const delaiGlobal =
-  dateValidationBC && dateCreation
-    ? diffInDays(dateValidationBC, dateCreation)
-    : null;
-
-const titre =
-  getField(row, [
-    'Article',
-    'Désignation',
-    'Produit',
-    'Titre',
-  ]) || `Ligne ${index + 2}`;
-
-return {
-  ligne: index + 2,
-  titre,
-  delaiAcheteur,
-  saving,
-  delaiGlobal,
-};
-  })
-  .filter(
-    (r: any) =>
-      (r.delaiAcheteur === null ||
-        r.delaiAcheteur >= 0) &&
-      (r.saving === null || r.saving >= 0) &&
-      (r.delaiGlobal === null ||
-        r.delaiGlobal >= 0)
-  );
+          return {
+            ligne: index + 3,
+            titre,
+            delaiAcheteur,
+            saving,
+            delaiGlobal,
+          };
+        })
+        .filter(
+          (r: any) =>
+            (r.delaiAcheteur !== null || r.saving !== null || r.delaiGlobal !== null) &&
+            (r.delaiAcheteur === null || r.delaiAcheteur >= 0) &&
+            (r.saving === null || r.saving >= 0) &&
+            (r.delaiGlobal === null || r.delaiGlobal >= 0)
+        );
 
       setResultats(calculated);
     };
