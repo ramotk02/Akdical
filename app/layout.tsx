@@ -5,9 +5,9 @@ export const metadata: Metadata = {
   title: "AKDICAL",
   description: "Outil de suivi des calculs achats",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/image.png",
     apple: "/image.png",        
-    shortcut: "/favicon.ico",
+    shortcut: "/image.png",
   },
 };
 
