@@ -3,7 +3,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "AKDICAL",
-  description: "Outil de suivi des calculs",
+  description: "Outil de suivi des calculs achats",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/logo.png",        
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
