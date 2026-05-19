@@ -9,13 +9,19 @@ import {
   LogIn,
   ShieldCheck,
   BarChart3,
+  UserPlus,
+  User,
 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
 
+  const [isRegister, setIsRegister] = useState(false);
+
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
 
   const login = async () => {
@@ -26,10 +32,11 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
     setLoading(false);
 
@@ -46,9 +53,52 @@ export default function LoginPage() {
     router.replace('/dashboard');
   };
 
+  const register = async () => {
+    if (!fullName || !email || !password) {
+      alert('Remplis tous les champs');
+      return;
+    }
+
+    if (password.length < 6) {
+      alert(
+        'Le mot de passe doit contenir au moins 6 caractères'
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+
+    setLoading(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert(
+      '✅ Compte créé avec succès ! Vérifie ton email.'
+    );
+
+    setIsRegister(false);
+    setFullName('');
+    setEmail('');
+    setPassword('');
+  };
+
   return (
     <div className="min-h-screen flex overflow-hidden">
-      {/* LEFT SIDE */}
+      {/* LEFT */}
       <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-blue-800 via-indigo-800 to-sky-700 text-white relative">
         <div className="absolute inset-0 bg-black/10" />
 
@@ -79,7 +129,7 @@ export default function LoginPage() {
                 </h3>
 
                 <p className="text-blue-100">
-                  Accès protégé avec authentification Supabase.
+                  Accès sécurisé avec Supabase.
                 </p>
               </div>
             </div>
@@ -93,7 +143,7 @@ export default function LoginPage() {
                 </h3>
 
                 <p className="text-blue-100">
-                  Calcul automatique des délais et taux de saving.
+                  Calcul automatique des KPI et import Excel.
                 </p>
               </div>
             </div>
@@ -101,11 +151,11 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* RIGHT SIDE */}
+      {/* RIGHT */}
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-8">
         <div className="w-full max-w-md">
           <div className="bg-white shadow-2xl rounded-[32px] p-10 border border-blue-100">
-            {/* MOBILE LOGO */}
+            {/* MOBILE */}
             <div className="lg:hidden text-center mb-8">
               <h1 className="text-4xl font-black bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
                 AKDICAL
@@ -116,15 +166,46 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {/* HEADER */}
             <div className="mb-10">
               <h2 className="text-4xl font-black text-slate-900 mb-3">
-                Connexion
+                {isRegister
+                  ? 'Créer un compte'
+                  : 'Connexion'}
               </h2>
 
               <p className="text-slate-600">
-                Connecte-toi pour accéder au dashboard.
+                {isRegister
+                  ? 'Crée ton accès AKDICAL.'
+                  : 'Connecte-toi pour accéder au dashboard.'}
               </p>
             </div>
+
+            {/* NAME */}
+            {isRegister && (
+              <div className="mb-5">
+                <label className="text-sm font-bold text-slate-700 mb-2 block">
+                  Nom complet
+                </label>
+
+                <div className="relative">
+                  <User
+                    size={20}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+
+                  <input
+                    type="text"
+                    placeholder="Nom Prénom"
+                    value={fullName}
+                    onChange={(e) =>
+                      setFullName(e.target.value)
+                    }
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-blue-200 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* EMAIL */}
             <div className="mb-5">
@@ -142,8 +223,10 @@ export default function LoginPage() {
                   type="email"
                   placeholder="email@entreprise.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-blue-200 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-blue-200 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -164,22 +247,48 @@ export default function LoginPage() {
                   type="password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-blue-200 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-blue-200 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
             {/* BUTTON */}
             <button
-              onClick={login}
+              onClick={
+                isRegister ? register : login
+              }
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 disabled:opacity-70"
+              className="w-full bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-70"
             >
-              <LogIn size={22} />
+              {isRegister ? (
+                <UserPlus size={22} />
+              ) : (
+                <LogIn size={22} />
+              )}
 
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading
+                ? 'Chargement...'
+                : isRegister
+                ? 'Créer un compte'
+                : 'Se connecter'}
             </button>
+
+            {/* SWITCH */}
+            <div className="mt-8 text-center">
+              <button
+                onClick={() =>
+                  setIsRegister(!isRegister)
+                }
+                className="text-blue-700 font-semibold hover:underline"
+              >
+                {isRegister
+                  ? 'Déjà un compte ? Se connecter'
+                  : "Pas de compte ? Créer un compte"}
+              </button>
+            </div>
 
             {/* FOOTER */}
             <div className="mt-8 text-center">
