@@ -134,11 +134,10 @@ export default function Dashboard() {
               <button
                 key={item.name}
                 onClick={() => setSelectedKPI(item.name)}
-                className={`w-full flex items-center gap-3 px-6 py-4 rounded-2xl transition-all text-lg font-semibold ${
-                  selectedKPI === item.name
+                className={`w-full flex items-center gap-3 px-6 py-4 rounded-2xl transition-all text-lg font-semibold ${selectedKPI === item.name
                     ? 'bg-blue-700 text-white shadow-lg'
                     : 'hover:bg-blue-50 text-slate-700'
-                }`}
+                  }`}
               >
                 <Icon size={24} />
                 <span>{item.name}</span>
@@ -216,7 +215,7 @@ function DynamicForm({ kpi, site, user, onSaved, refreshKey }: any) {
     return <ExcelImporter user={user} site={site} onSaved={onSaved} />;
   }
 
-  return <PresentationTable site={site} refreshKey={refreshKey} />;
+  return <PresentationTable site={site} refreshKey={refreshKey} user={user} />;
 }
 
 function DelaiAcheteur({ user, site, onSaved }: any) {
@@ -620,7 +619,7 @@ function ExcelImporter({ user, site, onSaved }: any) {
   );
 }
 
-function PresentationTable({ site, refreshKey }: any) {
+function PresentationTable({ site, refreshKey, user }: any) {
   const [rows, setRows] = useState<CalculationRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -631,6 +630,7 @@ function PresentationTable({ site, refreshKey }: any) {
       const { data, error } = await supabase
         .from('calculations')
         .select('*')
+        .eq('user_id', user?.id)
         .eq('location', site)
         .order('created_at', { ascending: false });
 
