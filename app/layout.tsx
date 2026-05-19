@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Outil de suivi des calculs achats",
   icons: {
     icon: "/favicon.ico",
-    apple: "/logo.png",        
+    apple: "/image.png",        
     shortcut: "/favicon.ico",
   },
 };
