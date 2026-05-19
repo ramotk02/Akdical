@@ -425,64 +425,112 @@ function ExcelImporter({ user, site, onSaved }: any) {
 
       const calculated = jsonData
   .map((row: any, index: number) => {
-    const validations = [
-      row['Date de validation 1'],
-      row['Date de validation 2'],
-      row['Date de validation 3'],
-    ]
-      .map(getDate)
-      .filter(Boolean) as Date[];
+    const getField = (row: any, possibleNames: string[]) => {
+  for (const name of possibleNames) {
+    if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+      return row[name];
+    }
+  }
 
-    const derniereValidation =
-      validations.length > 0
-        ? new Date(
-            Math.max(...validations.map((d) => d.getTime()))
-          )
-        : null;
+  return null;
+};
 
-    const delaiAcheteur =
-      derniereValidation && row['Date de création BC']
-        ? diffInDays(
-            row['Date de création BC'],
-            derniereValidation
-          )
-        : null;
+const validations = [
+  getField(row, [
+    'Date de validation 1',
+    'Date validation 1',
+    'Validation 1',
+    'Date val 1',
+  ]),
 
-    const achat = Number(
-      row["Montant d'Achat TTC"] || 0
-    );
+  getField(row, [
+    'Date de validation 2',
+    'Date validation 2',
+    'Validation 2',
+    'Date val 2',
+  ]),
 
-    const economie = Number(
-      row['Valeur économisée TTC'] || 0
-    );
+  getField(row, [
+    'Date de validation 3',
+    'Date validation 3',
+    'Validation 3',
+    'Date val 3',
+  ]),
+]
+  .map(getDate)
+  .filter(Boolean) as Date[];
 
-    const saving =
-      achat > 0
-        ? round2((economie / achat) * 100)
-        : null;
+const derniereValidation =
+  validations.length > 0
+    ? new Date(
+        Math.max(...validations.map((d) => d.getTime()))
+      )
+    : null;
 
-    const delaiGlobal =
-      row['Date de validation BC'] &&
-      row['Date de création']
-        ? diffInDays(
-            row['Date de validation BC'],
-            row['Date de création']
-          )
-        : null;
+const dateCreationBC = getField(row, [
+  'Date de création BC',
+  'Date création BC',
+  'Date BC',
+  'Date création bon de commande',
+]);
 
-    const titre =
-      row['Article'] ||
-      row['Désignation'] ||
-      row['Produit'] ||
-      `Ligne ${index + 2}`;
+const achat = Number(
+  getField(row, [
+    "Montant d'Achat TTC",
+    "Valeur d'achat TTC",
+    'Montant Achat TTC',
+  ]) || 0
+);
 
-    return {
-      ligne: index + 2,
-      titre,
-      delaiAcheteur,
-      saving,
-      delaiGlobal,
-    };
+const economie = Number(
+  getField(row, [
+    'Valeur économisée TTC',
+    'Valeur économisée',
+    'Economies TTC',
+  ]) || 0
+);
+
+const dateValidationBC = getField(row, [
+  'Date de validation BC',
+  'Date validation BC',
+  'Validation BC',
+]);
+
+const dateCreation = getField(row, [
+  'Date de création',
+  'Date création',
+]);
+
+const delaiAcheteur =
+  derniereValidation && dateCreationBC
+    ? diffInDays(dateCreationBC, derniereValidation)
+    : null;
+
+const saving =
+  achat > 0
+    ? round2((economie / achat) * 100)
+    : null;
+
+const delaiGlobal =
+  dateValidationBC && dateCreation
+    ? diffInDays(dateValidationBC, dateCreation)
+    : null;
+
+const titre =
+  getField(row, [
+    'Article',
+    'Désignation',
+    'Produit',
+    'Titre',
+  ]) || `Ligne ${index + 2}`;
+
+return {
+  ligne: index + 2,
+  titre,
+  delaiAcheteur,
+  saving,
+  delaiGlobal,
+};
   })
   .filter(
     (r: any) =>
