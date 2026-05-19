@@ -424,44 +424,74 @@ function ExcelImporter({ user, site, onSaved }: any) {
       const jsonData = XLSX.utils.sheet_to_json(sheet);
 
       const calculated = jsonData
-        .map((row: any, index: number) => {
-          const validations = [row['Date val 1'], row['Date val 2'], row['Date val 3']]
-            .map(getDate)
-            .filter(Boolean) as Date[];
+  .map((row: any, index: number) => {
+    const validations = [
+      row['Date de validation 1'],
+      row['Date de validation 2'],
+      row['Date de validation 3'],
+    ]
+      .map(getDate)
+      .filter(Boolean) as Date[];
 
-          const derniereValidation =
-            validations.length > 0
-              ? new Date(Math.max(...validations.map((d) => d.getTime())))
-              : null;
+    const derniereValidation =
+      validations.length > 0
+        ? new Date(
+            Math.max(...validations.map((d) => d.getTime()))
+          )
+        : null;
 
-          const delaiAcheteur =
-            derniereValidation && row['Date création bon de commande']
-              ? diffInDays(row['Date création bon de commande'], derniereValidation)
-              : null;
+    const delaiAcheteur =
+      derniereValidation && row['Date de création BC']
+        ? diffInDays(
+            row['Date de création BC'],
+            derniereValidation
+          )
+        : null;
 
-          const achat = Number(row["Valeur d'achat TTC"] || 0);
-          const economie = Number(row['Valeur économisée'] || 0);
+    const achat = Number(
+      row["Montant d'Achat TTC"] || 0
+    );
 
-          const saving = achat > 0 ? round2((economie / achat) * 100) : null;
+    const economie = Number(
+      row['Valeur économisée TTC'] || 0
+    );
 
-          const delaiGlobal =
-            row['Date validation budgétaire'] && row['Date création']
-              ? diffInDays(row['Date validation budgétaire'], row['Date création'])
-              : null;
+    const saving =
+      achat > 0
+        ? round2((economie / achat) * 100)
+        : null;
 
-          return {
-            ligne: index + 2,
-            titre: row['Titre'] || `Ligne ${index + 2}`,
-            delaiAcheteur,
-            saving,
-            delaiGlobal,
-          };
-        })
-        .filter((r: any) =>
-          (r.delaiAcheteur === null || r.delaiAcheteur >= 0) &&
-          (r.saving === null || r.saving >= 0) &&
-          (r.delaiGlobal === null || r.delaiGlobal >= 0)
-        );
+    const delaiGlobal =
+      row['Date de validation BC'] &&
+      row['Date de création']
+        ? diffInDays(
+            row['Date de validation BC'],
+            row['Date de création']
+          )
+        : null;
+
+    const titre =
+      row['Article'] ||
+      row['Désignation'] ||
+      row['Produit'] ||
+      `Ligne ${index + 2}`;
+
+    return {
+      ligne: index + 2,
+      titre,
+      delaiAcheteur,
+      saving,
+      delaiGlobal,
+    };
+  })
+  .filter(
+    (r: any) =>
+      (r.delaiAcheteur === null ||
+        r.delaiAcheteur >= 0) &&
+      (r.saving === null || r.saving >= 0) &&
+      (r.delaiGlobal === null ||
+        r.delaiGlobal >= 0)
+  );
 
       setResultats(calculated);
     };
